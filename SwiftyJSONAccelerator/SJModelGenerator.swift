@@ -27,6 +27,7 @@ struct VariableType {
     static let kBoolType = "Bool"
     static let kArrayType = "[]"
     static let kObjectType = "{OBJ}"
+    static let kStringDateType = "NSDate"
 }
 
 /**
@@ -121,8 +122,10 @@ public class ModelGenerator {
         let className = buildClassName(className, prefix: self.prefix!, isSubModule: isSubModule)
 
         if let object = parsedJSONObject.dictionary {
-
-            for (key, jsonValue) in object {
+            
+            let sortedKeysAndValues = object.sort { $0.0 < $1.0 }
+            
+            for (key, jsonValue) in sortedKeysAndValues {
 
                 let variableName: String = variableNameBuilder(key)
                 let stringConstantName: String = variableNameKeyBuilder(className, variableName: variableName)
@@ -182,7 +185,8 @@ public class ModelGenerator {
                 }
 
                 //ObjectMapper is generic for all
-                objectMapperMappings = objectMapperMappings.stringByAppendingFormat("%@\n", mappingForObjectMapper(variableName, key:stringConstantName))
+//                objectMapperMappings = objectMapperMappings.stringByAppendingFormat("%@\n", mappingForObjectMapper(variableName, key:stringConstantName))
+                objectMapperMappings = objectMapperMappings.stringByAppendingFormat("%@\n", mappingForObjectMapper(variableName, key: key, isDate: variableType == VariableType.kStringDateType))
             }
 
             // Get an instance of the template.
@@ -379,11 +383,12 @@ public class ModelGenerator {
      - returns: A generated string for declaring the variable.
      */
     internal func variableDeclarationBuilder(variableName: String, type: String) -> String {
-        if type == VariableType.kBoolType {
-            return "\tpublic var \(variableName): \(type) = false\n"
-        }
-
-        return "\tpublic var \(variableName): \(type)?\n"
+//        if type == VariableType.kBoolType {
+//            return "\tpublic var \(variableName): \(type) = false\n"
+//        }
+//
+//        return "\tpublic var \(variableName): \(type)?\n"
+        return "\tvar \(variableName): \(type)?\n"
     }
 
     //MARK: ObjectMapper Initalizer
@@ -396,6 +401,13 @@ public class ModelGenerator {
     */
     internal func mappingForObjectMapper(variableName: String, key: String) -> String {
         return "\t\t\(variableName) <- map[\(key)]"
+    }
+    internal func mappingForObjectMapper(variableName: String, key: String, isDate: Bool) -> String {
+        if isDate {
+            return "\t\t\(variableName) <- (map[\"\(key)\"], OMDateTransform())"
+        } else {
+            return "\t\t\(variableName) <- map[\"\(key)\"]"
+        }
     }
 
     //MARK: SwiftyJSON Initalizer
@@ -534,7 +546,29 @@ public class ModelGenerator {
     }
 
     //MARK: Helper Methods
-
+    
+    /**
+     正则查找
+     
+     - parameter regex: 正则表达式
+     - parameter text:  被查找的字符串
+     
+     - returns: 查找到的字符串列表
+     */
+    func matchesForRegexInText(regex: String!, text: String!) -> [String] {
+        
+        do {
+            let regex = try NSRegularExpression(pattern: regex, options: [])
+            let nsString = text as NSString
+            let results = regex.matchesInString(text,
+                                                options: [], range: NSMakeRange(0, nsString.length))
+            return results.map { nsString.substringWithRange($0.range)}
+        } catch let error as NSError {
+            print("invalid regex: \(error.localizedDescription)")
+            return []
+        }
+    }
+    
     /**
     Check the type of the variable by assesing the value, if it is not any of the known type mark it as an object.
 
@@ -548,7 +582,12 @@ public class ModelGenerator {
         var type: String = VariableType.kObjectType
 
         if let _ = js.string {
-            type = VariableType.kStringType
+            let matches = matchesForRegexInText("^\\d\\d\\d\\d-\\d\\d-\\d\\dT\\d\\d:\\d\\d:\\d\\d.\\d\\d\\d\\+\\d\\d:\\d\\d", text: js.string)
+            if matches.count == 1 {
+                type = VariableType.kStringDateType
+            } else {
+                type = VariableType.kStringType
+            }
         } else if let _ = js.bool {
             type = VariableType.kBoolType
         } else if let validNumber = js.number {
@@ -672,7 +711,10 @@ public class ModelGenerator {
      */
     internal func replaceInternalKeywordsForVariableName(currentName: String) -> String {
 
-        let currentReservedName = ["id" : "internalIdentifier", "description" : "descriptionValue","_id" : "internalIdentifier","class" : "classProperty", "struct" : "structProperty", "internal" : "internalProperty"]
+        // -- 移除id和description的处理
+        // let currentReservedName = ["id" : "internalIdentifier", "description" : "descriptionValue","_id" : "internalIdentifier","class" : "classProperty", "struct" : "structProperty", "internal" : "internalProperty"]
+        let currentReservedName = ["_id" : "internalIdentifier","class" : "classProperty", "struct" : "structProperty", "internal" : "internalProperty"]
+        // --
         for (key, value) in currentReservedName {
             if key == currentName {
                 return value

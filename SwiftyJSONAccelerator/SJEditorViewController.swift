@@ -117,7 +117,7 @@ class SJEditorViewController: NSViewController, NSTextViewDelegate {
             generator.prefix = prefixClassTextField.stringValue
             generator.authorName = authorNameTextField.stringValue
             generator.companyName = companyNameTextField.stringValue
-            generator.type = ModelType.kClassType
+            generator.type = ModelType.kStructType
             generator.supportSwiftyJSON = supportSwiftyState
             generator.includeSwiftyJSON = swiftyState
             generator.supportObjectMapper = supportObjectMapperState
