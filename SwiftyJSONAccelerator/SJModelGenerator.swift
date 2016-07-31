@@ -343,7 +343,10 @@ public class ModelGenerator {
      Replaces the seperator characters between words with space.
      */
     internal func replaceSeperatorsWithSpace(variableName: String) -> String {
-        return variableName.stringByReplacingOccurrencesOfString("_", withString: " ").stringByReplacingOccurrencesOfString("-", withString: " ")
+        // -- 不处理下划线
+//        return variableName.stringByReplacingOccurrencesOfString("_", withString: " ").stringByReplacingOccurrencesOfString("-", withString: " ")
+        return variableName.stringByReplacingOccurrencesOfString("-", withString: " ")
+        // --
     }
 
     /**
